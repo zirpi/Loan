@@ -15,6 +15,10 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.core.io.Resource;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.Properties;
+
 @Configuration
 public class LoanApplicationContext {
 
@@ -50,11 +54,18 @@ public class LoanApplicationContext {
 
     @Bean
     public DataSource dataSource() {
+        //DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        //dataSource.setDriverClassName("org.h2.Driver");
+        //dataSource.setUrl("jdbc:h2:mem:process-engine;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
+        //dataSource.setUsername("sa");
+        //dataSource.setPassword("");
+        //return dataSource;
+
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName("org.h2.Driver");
-        dataSource.setUrl("jdbc:h2:mem:process-engine;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
-        dataSource.setUsername("sa");
-        dataSource.setPassword("");
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl("jdbc:postgresql://localhost/loan-camunda?autoReconnect=true");
+        dataSource.setUsername("camunda");
+        dataSource.setPassword("camunda");
         return dataSource;
     }
 
