@@ -110,48 +110,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 
 
-void SetSplashImage(HWND hwndSplash, HBITMAP hbmpSplash)
-{
-    // get the size of the bitmap
-    BITMAP bm;
-    GetObject(hbmpSplash, sizeof(bm), &bm);
-    SIZE sizeSplash = { bm.bmWidth, bm.bmHeight };
-
-    // get the primary monitor's info
-    POINT ptZero = { 0 };
-    HMONITOR hmonPrimary = MonitorFromPoint(ptZero, MONITOR_DEFAULTTOPRIMARY);
-    MONITORINFO monitorinfo = { 0 };
-    monitorinfo.cbSize = sizeof(monitorinfo);
-    GetMonitorInfo(hmonPrimary, &monitorinfo);
-
-    // center the splash screen in the middle of the primary work area
-    const RECT& rcWork = monitorinfo.rcWork;
-    POINT ptOrigin;
-    ptOrigin.x = 0;
-    ptOrigin.y = rcWork.top + (rcWork.bottom - rcWork.top - sizeSplash.cy) / 2;
-
-    // create a memory DC holding the splash bitmap
-    HDC hdcScreen = GetDC(NULL);
-    HDC hdcMem = CreateCompatibleDC(hdcScreen);
-    HBITMAP hbmpOld = (HBITMAP)SelectObject(hdcMem, hbmpSplash);
-
-    // use the source image's alpha channel for blending
-    BLENDFUNCTION blend = { 0 };
-    blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = 255;
-    blend.AlphaFormat = AC_SRC_ALPHA;
-
-    // paint the window (in the right location) with the alpha-blended bitmap
-    UpdateLayeredWindow(hwndSplash, hdcScreen, &ptOrigin, &sizeSplash,
-        hdcMem, &ptZero, RGB(0, 0, 0), &blend, ULW_ALPHA);
-
-    // delete temporary objects
-    SelectObject(hdcMem, hbmpOld);
-    DeleteDC(hdcMem);
-    ReleaseDC(NULL, hdcScreen);
-}
-
-
 BOOL CALLBACK GoToDialog(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -175,3 +133,48 @@ BOOL CALLBACK GoToDialog(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lPara
     }
     return TRUE;
 }
+
+
+
+#include <Windows.h>
+
+#define WS_EX_LAYERED           0x00080000    
+#define LWA_COLORKEY            0x00000001
+#define LWA_ALPHA               0x00000002
+
+typedef DWORD(WINAPI* PSLWA)(HWND, DWORD, BYTE, DWORD);
+
+static PSLWA pSetLayeredWindowAttributes = NULL;
+static BOOL initialized = FALSE;
+
+BOOL MakeWindowTransparent(HWND hWnd, unsigned char factor)
+{
+    if (!initialized)
+    {
+        HMODULE hDLL = LoadLibrary("user32");
+
+        pSetLayeredWindowAttributes =
+            (PSLWA)GetProcAddress(hDLL, "SetLayeredWindowAttributes");
+        initialized = TRUE;
+    }
+
+    if (pSetLayeredWindowAttributes == NULL)  return FALSE;
+
+    SetLastError(0);
+
+    SetWindowLong(hWnd,
+        GWL_EXSTYLE,
+        GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+
+    if (GetLastError())
+        return FALSE;
+
+    return pSetLayeredWindowAttributes(hWnd,
+        RGB(255, 255, 255),
+        factor,
+        LWA_COLORKEY | LWA_ALPHA);
+}
+
+
+
+
